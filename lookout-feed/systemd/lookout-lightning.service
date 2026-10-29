@@ -1,0 +1,11 @@
+[Unit]
+Description=Lookout lightning collector
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/latitude-lookout/lightning.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

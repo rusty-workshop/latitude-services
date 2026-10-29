@@ -1,0 +1,15 @@
+--- a/linux/src/musegadget/executor.py
++++ b/linux/src/musegadget/executor.py
+@@ -152,6 +152,12 @@
+             "PATH": SAFE_PATH,
+             "LANG": os.environ.get("LANG", "C.UTF-8"),
+         }
++        # Running as a systemd --user service: keep the user session's bus so
++        # Muse's commands can use `systemctl --user` and `journalctl --user`.
++        for key in ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"):
++            if os.environ.get(key):
++                env[key] = os.environ[key]
++        env["PATH"] = f"{self.account.home}/.local/bin:" + SAFE_PATH
+         options: dict = {"env": env, "start_new_session": True}
+         if os.geteuid() == 0 and self.account.uid != 0:
+             options.update(user=self.account.uid, group=self.account.gid,

@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muse Echo settings</title>
+<style>
+  :root { --bg:#0e0b14; --card:#231c30; --ink:#f3eef8; --muted:#9c93ab; --violet:#8b6cff; --teal:#45d3c7; --coral:#ff7a8a; --amber:#ffc266; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border-radius: 16px; padding: 18px 20px; margin-bottom: 16px; }
+  h2 { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); margin: 0 0 12px; }
+  label.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
+  label.row small { display:block; color: var(--muted); font-size: 13px; }
+  select, input[type=text], input[type=number] { background:#171221; color:var(--ink); border:1px solid #3a3050; border-radius:10px; padding:8px 10px; font:inherit; }
+  input[type=range] { width: 220px; accent-color: var(--violet); }
+  input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--violet); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+  .chips button { padding: 6px 12px; font-size: 13px; background: #171221; border: 1px solid #3a3050; color: var(--ink); }
+  .chips button:hover { border-color: var(--violet); }
+  .chips button.on { background: var(--violet); border-color: var(--violet); }
+  h3 { font-size: 13px; color: var(--muted); margin: 6px 0 2px; font-weight: 500; }
+  .qa { display: grid; grid-template-columns: 140px 1fr; gap: 8px; margin-bottom: 8px; }
+  .qa input { width: 100%; }
+  button { background: var(--violet); color: #fff; border: 0; border-radius: 999px; padding: 10px 22px; font: inherit; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--violet); border: 1px solid var(--violet); }
+  #status { position: sticky; top: 0; padding: 10px 0; color: var(--muted); background: var(--bg); }
+  #status.ok { color: var(--teal); } #status.err { color: var(--coral); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<main>
+  <h1>Muse Echo</h1>
+  <p class="sub">Settings for the Echo Show, from your laptop. Changes reach the Echo within a few seconds.</p>
+  <div id="status">Loading…</div>
+  <section id="live" hidden>
+    <h2>What the Echo shows</h2>
+    <img id="screen" alt="The Echo's screen" style="width:100%; aspect-ratio:2/1; border-radius:12px; background:#000; display:block">
+    <small id="screenNote" style="color:var(--muted)">Connecting…</small>
+  </section>
+  <section id="say" hidden>
+    <h2>Say something on the Echo</h2>
+    <div style="display:flex; gap:10px">
+      <input type="text" id="sayText" maxlength="300" placeholder="Dinner's ready!" style="flex:1">
+      <button type="button" id="sayBtn">Announce</button>
+    </div>
+    <small style="color:var(--muted)">Shown on the Echo and spoken out loud (shown only, during quiet hours).</small>
+  </section>
+  <section id="phone" hidden>
+    <h2>Phone app</h2>
+    <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start">
+      <div id="phoneQr" style="background:#fff; padding:10px; border-radius:12px; width:220px; height:220px"></div>
+      <div style="flex:1; min-width:240px">
+        <p style="margin:0 0 8px">1. Install the app on your phone: <a id="phoneApk" href="/phone-app/app.apk" style="color:var(--teal)">download it</a> <small id="phoneVer" style="color:var(--muted)"></small></p>
+        <p style="margin:0 0 8px">2. Open it and tap <b>Scan to pair</b>, then point it at the code.</p>
+        <p style="margin:0 0 8px; color:var(--muted); font-size:13px">At home it talks to the Latitude directly. Away from home it goes over Tailscale, so keep the Tailscale app connected on your phone.</p>
+        <details><summary style="cursor:pointer; color:var(--muted)">Can't scan? Paste this into the app instead</summary>
+          <code id="phoneCode" style="display:block; word-break:break-all; font-size:12px; margin-top:6px; color:var(--muted)"></code></details>
+        <button type="button" class="ghost" id="phoneReset" style="margin-top:10px; padding:6px 14px">New pairing code (unpairs the old phone)</button>
+      </div>
+    </div>
+    <h3 style="margin-top:14px">Notifications on the phone</h3>
+    <label class="row"><span>Letters<small>from friends and the pen pal, and <span class="bn">Puff</span>'s Sunday letter to you</small></span><input type="checkbox" data-notify="letters"></label>
+    <label class="row"><span>Stickers<small>when a new one's earned</small></span><input type="checkbox" data-notify="stickers"></label>
+    <label class="row"><span>Holiday cards<small>the morning of the holiday</small></span><input type="checkbox" data-notify="cards"></label>
+    <label class="row"><span>First snow<small>when they build the snowman</small></span><input type="checkbox" data-notify="snow"></label>
+    <label class="row"><span>Weekly report<small>Sunday evening: school, Puff's week, the server</small></span><input type="checkbox" data-notify="weekly"></label>
+    <label class="row"><span>Someone's here?<small>a new phone stays on the Wi-Fi a few minutes</small></span><input type="checkbox" data-notify="visitor"></label>
+    <label class="row"><span>New costume<small>the monthly costume arrives</small></span><input type="checkbox" data-notify="costume"></label>
+  </section>
+  <section id="playground" hidden>
+    <h2><span class="bn">Puff</span>'s playground</h2>
+    <p style="color:var(--muted); margin:0 0 8px">Tap anything to see it on the Echo for about 5 seconds. Nothing is saved.</p>
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px">
+      <button type="button" id="playAll">Play everything</button>
+      <button type="button" class="ghost" id="stopAll" hidden>Stop</button>
+      <span id="playNow" style="color:var(--muted)"></span>
+    </div>
+    <div id="blobGroups"></div>
+  </section>
+  <section id="today" hidden>
+    <h2>Today on the Echo</h2>
+    <svg id="timeline" viewBox="0 0 720 70" style="width:100%; height:auto; display:block"></svg>
+    <div id="legend" style="color:var(--muted); font-size:13px; margin-top:6px"></div>
+    <div id="counts" style="margin-top:6px"></div>
+  </section>
+  <section id="journal" hidden>
+    <h2><span class="bn">Puff</span>'s diary</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px">
+      <button type="button" class="ghost" data-ask="diary">Write today's entry now</button>
+      <button type="button" class="ghost" data-ask="thing">New thing of the day</button>
+    </div>
+    <div id="diaryList"></div>
+    <h3 style="margin-top:14px">Photo album</h3>
+    <div id="album" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px"></div>
+    <h3 style="margin-top:14px"><span class="bn">Puff</span>'s friends <button type="button" class="ghost" id="newFriend" style="padding:4px 12px; font-size:13px">+ New friend</button> <button type="button" class="ghost" id="friendsLeave" style="padding:4px 12px; font-size:13px; color:var(--coral); border-color:var(--coral)">Send everyone home</button></h3>
+    <div id="friendList"></div>
+    <h3 style="margin-top:14px"><span class="bn">Puff</span>'s world</h3>
+    <div id="worldPanel" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px"></div>
+    <h3 style="margin-top:14px">Friend moments</h3>
+    <div id="friendAlbum" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px"></div>
+    <h3 style="margin-top:14px">Things of the day</h3>
+    <div id="thingList"></div>
+    <div id="recapBox" hidden><h3 style="margin-top:14px">This week on the Latitude</h3><p id="recap" style="margin:4px 0; white-space:pre-wrap"></p></div>
+    <h3 style="margin-top:14px">Comings and goings</h3>
+    <div id="presenceLog" style="color:var(--muted)"></div>
+  </section>
+  <section id="health" hidden>
+    <h2>Echo health</h2>
+    <div id="healthBody" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px"></div>
+    <details style="margin-top:8px"><summary style="cursor:pointer; color:var(--muted)">Recent errors</summary><pre id="healthErrors" style="white-space:pre-wrap; font-size:12px; color:var(--muted); margin:6px 0 0"></pre></details>
+  </section>
+  <section id="gifts" hidden>
+    <h2>Send <span class="bn">Puff</span> a gift</h2>
+    <p style="color:var(--muted); margin:0 0 8px">It unwraps it on the Echo straight away. Hats stay on for a day.</p>
+    <input type="text" id="giftNote" maxlength="120" placeholder="A little note (optional)" style="width:100%; margin-bottom:8px">
+    <div class="chips" id="giftChips"></div>
+  </section>
+  <section id="world" hidden>
+    <h2><span class="bn">Puff</span>'s world file</h2>
+    <p style="color:var(--muted); margin:0 0 8px">Everything that makes the Echo yours: settings, the room, friends, letters, diaries, quick actions, routines. Pairing and tokens aren't included. Photos stay on the Latitude.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <button type="button" class="ghost" id="exportWorld">Download</button>
+      <label class="ghost" style="border:1px solid var(--violet); color:var(--violet); border-radius:999px; padding:10px 22px; cursor:pointer">Restore from a file…<input type="file" id="importWorld" accept=".json,application/json" hidden></label>
+    </div>
+  </section>
+  <form id="f" hidden>
+    <section>
+      <h2>Look</h2>
+      <label class="row">Theme <select name="theme"></select></label>
+      <label class="row"><span>Background<small>behind the home screen</small></span><select name="background"></select></label>
+      <label class="row">Clock face <select name="clock_face"></select></label>
+      <label class="row">Slideshow clock <select name="frame_clock"></select></label>
+      <label class="row"><span>Photo frame starts after<small>minutes idle; 0 turns it off</small></span><input type="number" name="frame_delay_min" min="0" max="120"></label>
+      <label class="row"><span>Auto brightness<small>follows the room's light</small></span><input type="checkbox" name="auto_brightness"></label>
+      <label class="row"><span>Day and night look<small>airier in a bright room, deeper and lower-glare in a dim one</small></span><input type="checkbox" name="day_night_look"></label>
+      <label class="row"><span>Ambience<small>faint dust motes by day, fireflies in the evening, snow in winter</small></span><input type="checkbox" name="ambience"></label>
+      <label class="row"><span>Weather colours<small>accents lean bluer in rain, golden in sun, cool white in snow</small></span><input type="checkbox" name="weather_accents"></label>
+      <label class="row"><span>UI sounds<small>soft clicks, a whoosh between pages, a chime for cards (never in quiet hours)</small></span><input type="checkbox" name="ui_sounds"></label>
+      <label class="row"><span>Your name<small>for the greeting above the clock</small></span><input type="text" name="user_name" maxlength="20" style="width:160px"></label>
+      <label class="row"><span>Guest Wi-Fi name<small>shows a 📶 button on the Echo with a QR code visitors can scan to join</small></span><input type="text" name="guest_wifi_ssid" maxlength="32" style="width:200px"></label>
+      <label class="row"><span>Guest Wi-Fi password<small id="wifiPassNote">stays on the Echo (never shown here); leave empty to keep it</small></span><input type="password" name="guest_wifi_pass" maxlength="63" autocomplete="new-password" style="width:200px"></label>
+      <label class="row"><span>Guest Wi-Fi security</span><select name="guest_wifi_sec"><option value="WPA">WPA / WPA2 / WPA3</option><option value="WEP">WEP</option><option value="nopass">None (open)</option></select></label>
+      <label class="row">Server status pill <input type="checkbox" name="show_server_pill"></label>
+      <label class="row"><span>Night screen<small>what shows when it sleeps overnight</small></span><select name="night_scene"></select></label>
+    </section>
+    <section>
+      <h2><span class="bn">Puff</span></h2>
+      <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px 0">
+        <span>Hold still<small id="stillNote" style="display:block; color:var(--muted); font-size:13px">no idle breathing, drifting or fidgeting (friends too)</small></span>
+        <span style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end">
+          <button type="button" class="ghost" data-still="0" style="padding:6px 12px">Off</button>
+          <button type="button" class="ghost" data-still="30" style="padding:6px 12px">30 min</button>
+          <button type="button" class="ghost" data-still="60" style="padding:6px 12px">1 hour</button>
+          <button type="button" class="ghost" data-still="120" style="padding:6px 12px">2 hours</button>
+          <button type="button" class="ghost" data-still="-1" style="padding:6px 12px">Until I turn it off</button>
+        </span>
+      </div>
+      <div class="row" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px 0">
+        <span>Quiet now<small id="quietNote" style="display:block; color:var(--muted); font-size:13px">like the overnight quiet hours: no wake word, no talking out loud</small></span>
+        <span style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end">
+          <button type="button" class="ghost" data-quiet="0" style="padding:6px 12px">Off</button>
+          <button type="button" class="ghost" data-quiet="60" style="padding:6px 12px">1 hour</button>
+          <button type="button" class="ghost" data-quiet="120" style="padding:6px 12px">2 hours</button>
+          <button type="button" class="ghost" data-quiet="240" style="padding:6px 12px">4 hours</button>
+          <button type="button" class="ghost" data-quiet="-1" style="padding:6px 12px">Until I turn it off</button>
+        </span>
+      </div>
+      <label class="row"><span>Energy<small>calm … hyper</small></span><input type="range" name="blob_energy" min="0" max="1" step="0.25"></label>
+      <label class="row"><span>Little sounds<small>never in quiet hours</small></span><input type="checkbox" name="blob_sounds"></label>
+    </section>
+    <section>
+      <h2>Talking</h2>
+      <label class="row">Speak replies <input type="checkbox" name="speak_replies"></label>
+      <label class="row"><span>Follow-up listening<small>listen for a reply after answering</small></span><input type="checkbox" name="follow_up"></label>
+      <label class="row"><span>Wake word<small id="wakeHint">how readily "hey pixel" wakes it</small></span><select name="wake_sensitivity"></select></label>
+    </section>
+    <section>
+      <h2>Screen</h2>
+      <label class="row"><span>Come to the front<small>when something new shows</small></span><input type="checkbox" name="come_to_front"></label>
+      <label class="row"><span>Stay in front<small>back after a minute behind another app</small></span><input type="checkbox" name="return_to_front"></label>
+      <label class="row"><span>Laptop notifications<small>quiet chips on the Echo</small></span><input type="checkbox" name="laptop_notifications"></label>
+      <label class="row"><span>Guest mode<small id="guestNote"></small></span>
+        <span><button type="button" class="ghost" data-guest="4">On for 4 h</button> <button type="button" class="ghost" data-guest="0">Off</button></span></label>
+    </section>
+    <section>
+      <h2>Pages</h2>
+      <p style="color:var(--muted); margin:0 0 8px">The pages you swipe to from the clock (which always comes first). Changes apply right away.</p>
+      <div id="pages"></div>
+    </section>
+    <section>
+      <h2>Home and room</h2>
+      <label class="row"><span>Name<small>Pixel picks one if it's empty</small></span><input type="text" name="blob_name" maxlength="16" style="width:160px"></label>
+      <label class="row"><span>Room sense<small>the room going dark at night puts the Echo to sleep; lights on in the morning wakes <span class="bn">Puff</span> up</small></span><input type="checkbox" name="room_sense"></label>
+      <label class="row"><span><span class="bn">Puff</span>'s diary<small>Pixel writes <span class="bn">Puff</span>'s day each evening</small></span><input type="checkbox" name="diary"></label>
+      <label class="row"><span>Thing of the day<small>a word, fact or bit of history on a little sign each morning</small></span><input type="checkbox" name="daily_thing"></label>
+      <label class="row"><span><span class="bn">Puff</span>'s room<small>things it collects over the weeks, drawn faintly behind it</small></span><input type="checkbox" name="blob_room"></label>
+      <label class="row"><span>Friend visits<small>its friends drop by to chat, play games or nap</small></span><input type="checkbox" name="blob_friend"></label>
+      <label class="row"><span>Sniffly days<small>now and then <span class="bn">Puff</span> catches a cold for a day </small></span><input type="checkbox" name="puff_sniffles"></label>
+      <label class="row"><span>Sleepovers at friends'<small>sometimes <span class="bn">Puff</span> stays the night at a friend's house</small></span><input type="checkbox" name="puff_away_sleepovers"></label>
+      <label class="row"><span>New houses<small>new friends arrive after a house is built over a week (off: they just turn up)</small></span><input type="checkbox" name="puff_house_build"></label>
+      <label class="row"><span>Laptop breaks<small>a nudge after 2 hours at the laptop, and a wind-down hint late at night</small></span><input type="checkbox" name="laptop_break"></label>
+      <label class="row"><span>Warm evenings<small>the screen turns a little warmer from sunset to sunrise</small></span><input type="checkbox" name="warm_evenings"></label>
+      <label class="row"><span>Bedtime reminder<small>learns when the lights usually go off, mentions it if you're up much later</small></span><input type="checkbox" name="bedtime_hint"></label>
+      <div class="row" style="display:block; padding:8px 0">
+        <span>Welcome home<small id="presenceNote" style="display:block; color:var(--muted); font-size:13px">Pick your phone so <span class="bn">Puff</span> knows when you come and go.</small></span>
+        <div style="margin-top:8px"><button type="button" class="ghost" id="findDevices">Find my phone…</button></div>
+        <div id="devices" style="margin-top:8px"></div>
+      </div>
+    </section>
+    <section>
+      <h2>Wellness nudges</h2>
+      <label class="row"><span>💧 Drink water<small>every hour</small></span><input type="checkbox" name="wellness_water"></label>
+      <label class="row"><span>🙆 Stand up and stretch<small>every 50 minutes</small></span><input type="checkbox" name="wellness_stretch"></label>
+      <label class="row"><span>👀 Rest your eyes<small>every 20 minutes</small></span><input type="checkbox" name="wellness_eyes"></label>
+      <label class="row"><span>Between<small>hours of the day (0–24)</small></span>
+        <span><input type="number" name="wellness_start" min="0" max="23" style="width:70px"> and <input type="number" name="wellness_end" min="1" max="24" style="width:70px"></span></label>
+    </section>
+    <section>
+      <h2>Routines</h2>
+      <p style="color:var(--muted); margin:0 0 8px">Ask Pixel something on a schedule. No days picked means every day.</p>
+      <div id="routines"></div>
+      <button type="button" class="ghost" id="addRoutine">+ Add a routine</button>
+    </section>
+    <section>
+      <h2>Quick actions</h2>
+      <p style="color:var(--muted); margin:0 0 8px">Up to 4 buttons. Give a part of the day its own set, or leave it empty to use the all-day buttons then.</p>
+      <div style="display:flex; gap:6px; margin-bottom:10px" id="qaTabs">
+        <button type="button" class="ghost" data-set="all">All day</button>
+        <button type="button" class="ghost" data-set="morning">Morning · 5am–noon</button>
+        <button type="button" class="ghost" data-set="afternoon">Afternoon · noon–5pm</button>
+        <button type="button" class="ghost" data-set="evening">Evening · 5pm–5am</button>
+      </div>
+      <div id="qa"></div>
+    </section>
+    <button type="submit">Save to the Echo</button>
+  </form>
+</main>
+<script>
+const f = document.getElementById('f'), status = document.getElementById('status');
+// The blob's own name (Puff), wherever the page mentions it.
+let blobName = 'Puff';
+const BN = () => blobName;
+let loaded = null;
+function say(text, cls) { status.textContent = text; status.className = cls || ''; }
+async function load() {
+  const r = await fetch('/echo/settings');
+  const d = await r.json();
+  if (!d.settings) { say('The Echo hasn\'t sent its settings yet. Is it on?', 'err'); return; }
+  loaded = d.settings;
+  blobName = (loaded.blob_name || '').trim() || 'the blob';
+  document.querySelectorAll('.bn').forEach(e => { e.textContent = blobName; });
+  document.querySelectorAll('h2 .bn, h3 .bn').forEach(e => { e.textContent = blobName[0].toUpperCase() + blobName.slice(1); });
+  for (const [name, opts] of Object.entries(loaded.choices || {})) {
+    const sel = f.elements[name]; if (!sel) continue;
+    const labels = (loaded.choice_labels || {})[name] || {};
+    sel.innerHTML = opts.map(o => `<option value="${o}">${esc(labels[o] || (o[0] + o.slice(1).toLowerCase().replace(/_/g, ' ')))}</option>`).join('');
+  }
+  for (const el of f.elements) {
+    if (!el.name || !(el.name in loaded)) continue;
+    if (el.type === 'checkbox') el.checked = !!loaded[el.name]; else el.value = loaded[el.name];
+  }
+  // The wake word's levels explain themselves under the menu.
+  const wakeSel = f.elements['wake_sensitivity'], hints = (loaded.choice_hints || {}).wake_sensitivity || {};
+  const showHint = () => { document.getElementById('wakeHint').textContent = hints[wakeSel.value] || 'how readily the wake phrase wakes it'; };
+  wakeSel.onchange = showHint; showHint();
+  qaSets = {all: (loaded.quick_actions || []).slice(), morning: [], afternoon: [], evening: []};
+  for (const k of ['morning', 'afternoon', 'evening']) qaSets[k] = ((loaded.quick_sets || {})[k] || []).slice();
+  qaOriginal = JSON.stringify(qaSets);
+  routines = (loaded.routines || []).map(r => ({...r})); routinesOriginal = JSON.stringify(routines); drawRoutines();
+  drawPages();
+  const su = loaded.still_until_ms || 0;
+  document.getElementById('stillNote').textContent = su === -1 ? 'holding still until you turn it off'
+    : su > Date.now() ? `holding still until ${new Date(su).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : 'no idle breathing, drifting or fidgeting (friends too)';
+  document.getElementById('qa').innerHTML = ''; qaCurrent = 'all';  // fresh from the Echo: don't fold old inputs back in
+  showQa('all');
+  document.getElementById('wifiPassNote').textContent = loaded.guest_wifi_has_pass ? 'saved on the Echo (never shown here); type a new one to change it' : 'stays on the Echo (never shown here)';
+  const qu = loaded.quiet_until_ms || 0;
+  document.getElementById('quietNote').textContent = qu === -1 ? 'quiet until you turn it off'
+    : qu > Date.now() ? `quiet until ${new Date(qu).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : 'like the overnight quiet hours: no wake word, no talking out loud';
+  const g = loaded.guest_until_ms || 0;
+  document.getElementById('guestNote').textContent = g > Date.now() ? `on until ${new Date(g).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}` : 'hides agenda, notes and reminders';
+  f.hidden = false;
+  document.getElementById('say').hidden = false;
+  startLive();
+  buildPlayground(loaded.blob || {});
+  say(`Echo ${loaded.version} · last heard from ${d.age_s}s ago`, 'ok');
+}
+async function send(changes) {
+  say('Sending…');
+  const r = await fetch('/echo/settings', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify(changes) });
+  if (!r.ok) { say('Couldn\'t send: ' + (await r.text()), 'err'); return; }
+  say('Sent. The Echo applies it within a few seconds…', 'ok');
+  setTimeout(load, 7000);
+}
+let qaSets = null, qaOriginal = '', qaCurrent = 'all';
+let routines = [], routinesOriginal = '[]';
+const DAYS = [['MONDAY','M'],['TUESDAY','T'],['WEDNESDAY','W'],['THURSDAY','T'],['FRIDAY','F'],['SATURDAY','S'],['SUNDAY','S']];
+function drawRoutines() {
+  const box = document.getElementById('routines'); box.innerHTML = '';
+  routines.forEach((r, i) => {
+    const days = DAYS.map(([d, l]) => `<button type="button" class="ghost" data-r="${i}" data-day="${d}" style="padding:4px 9px; ${r.days.includes(d) ? 'background:var(--violet);color:#fff' : ''}">${l}</button>`).join('');
+    box.insertAdjacentHTML('beforeend', `<div style="border:1px solid #3a3050; border-radius:12px; padding:10px; margin-bottom:10px">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+        <input type="checkbox" data-r="${i}" data-k="enabled" ${r.enabled ? 'checked' : ''} title="On">
+        <input type="time" data-r="${i}" data-k="time" value="${r.time}">
+        <input type="text" data-r="${i}" data-k="label" value="" placeholder="Name" style="width:150px">
+        <span>${days}</span>
+        <button type="button" class="ghost" data-del="${i}" style="padding:4px 10px">✕</button>
+      </div>
+      <input type="text" data-r="${i}" data-k="prompt" value="" placeholder="What to ask Pixel" style="width:100%; margin-top:8px">
+    </div>`);
+    box.querySelector(`[data-r="${i}"][data-k=label]`).value = r.label;
+    box.querySelector(`[data-r="${i}"][data-k=prompt]`).value = r.prompt;
+  });
+  box.querySelectorAll('input[data-k]').forEach(el => el.addEventListener('input', () => {
+    const r = routines[el.dataset.r]; r[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+  }));
+  box.querySelectorAll('button[data-day]').forEach(b => b.addEventListener('click', () => {
+    const r = routines[b.dataset.r], d = b.dataset.day;
+    r.days = r.days.includes(d) ? r.days.filter(x => x !== d) : r.days.concat([d]); drawRoutines();
+  }));
+  box.querySelectorAll('button[data-del]').forEach(b => b.addEventListener('click', () => { routines.splice(Number(b.dataset.del), 1); drawRoutines(); }));
+}
+document.getElementById('addRoutine').addEventListener('click', () => {
+  routines.push({id: '', time: '07:15', days: [], label: '', prompt: '', enabled: true}); drawRoutines();
+});
+function readQa() {
+  const out = [];
+  for (let i = 0; i < 4; i++) {
+    const l = f.querySelector(`[data-qa=label][data-i="${i}"]`), p = f.querySelector(`[data-qa=prompt][data-i="${i}"]`);
+    if (l && p && l.value.trim() && p.value.trim()) out.push({label: l.value.trim(), prompt: p.value.trim()});
+  }
+  return out;
+}
+function showQa(set) {
+  if (qaSets && document.querySelector('#qa [data-qa]')) qaSets[qaCurrent] = readQa();
+  qaCurrent = set;
+  document.querySelectorAll('#qaTabs button').forEach(b => b.classList.toggle('on', b.dataset.set === set));
+  document.querySelectorAll('#qaTabs button').forEach(b => { b.style.background = b.dataset.set === set ? 'var(--violet)' : ''; b.style.color = b.dataset.set === set ? '#fff' : ''; });
+  const qa = document.getElementById('qa'); qa.innerHTML = '';
+  const list = qaSets[set];
+  for (let i = 0; i < 4; i++) {
+    const a = list[i] || {label: '', prompt: ''};
+    qa.insertAdjacentHTML('beforeend', `<div class="qa"><input type="text" data-qa="label" data-i="${i}" placeholder="Button" maxlength="18"><input type="text" data-qa="prompt" data-i="${i}" placeholder="What it asks Pixel"></div>`);
+    qa.querySelector(`[data-qa=label][data-i="${i}"]`).value = a.label;
+    qa.querySelector(`[data-qa=prompt][data-i="${i}"]`).value = a.prompt;
+  }
+  if (set !== 'all' && !list.length) qa.insertAdjacentHTML('afterbegin', '<p style="color:var(--muted); margin:0 0 8px">Empty: the all-day buttons show at this time.</p>');
+}
+document.querySelectorAll('#qaTabs button').forEach(b => b.addEventListener('click', () => showQa(b.dataset.set)));
+f.addEventListener('submit', e => {
+  e.preventDefault();
+  const changes = {};
+  for (const el of f.elements) {
+    if (!el.name) continue;
+    const v = el.type === 'checkbox' ? el.checked : (el.type === 'number' || el.type === 'range') ? Number(el.value) : el.value;
+    if (loaded[el.name] !== v) changes[el.name] = v;
+  }
+  qaSets[qaCurrent] = readQa();
+  if (JSON.stringify(qaSets) !== qaOriginal) {
+    const orig = JSON.parse(qaOriginal);
+    if (JSON.stringify(qaSets.all) !== JSON.stringify(orig.all) && qaSets.all.length) changes.quick_actions = qaSets.all;
+    const sets = {};
+    for (const k of ['morning', 'afternoon', 'evening']) if (JSON.stringify(qaSets[k]) !== JSON.stringify(orig[k])) sets[k] = qaSets[k];
+    if (Object.keys(sets).length) changes.quick_sets = sets;
+  }
+  if (JSON.stringify(routines) !== routinesOriginal) changes.routines = routines.filter(r => r.prompt.trim() && r.time);
+  if (!Object.keys(changes).length) { say('Nothing changed.'); return; }
+  send(changes);
+});
+const GROUPS = [["reaction","Reactions"],["mood","Moods (faces)"],["state","Special states"],["accessory","Accessories"],
+  ["prop","Things it holds"],["friend","Friend visits (a minute each)"],["color","Colours"],["weather","Weather effects"],["holiday","Holiday effects"]];
+const pretty = v => v[0] + v.slice(1).toLowerCase().replace(/_/g, ' ');
+let playing = null;
+async function poke(kind, value) {
+  const r = await fetch('/echo/blob', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({kind, value}) });
+  if (!r.ok) say('Couldn\'t send: ' + (await r.text()), 'err');
+}
+function mark(btn) {
+  document.querySelectorAll('.chips button.on').forEach(b => b.classList.remove('on'));
+  if (btn) { btn.classList.add('on'); setTimeout(() => btn.classList.remove('on'), 5000); }
+}
+function buildPlayground(blob) {
+  const box = document.getElementById('blobGroups'); box.innerHTML = '';
+  for (const [kind, title] of GROUPS) {
+    const values = blob[kind] || []; if (!values.length) continue;
+    box.insertAdjacentHTML('beforeend', `<h3>${title}</h3><div class="chips" data-kind="${kind}"></div>`);
+    const row = box.lastElementChild;
+    for (const v of values) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = pretty(v);
+      b.dataset.kind = kind; b.dataset.value = v;
+      b.addEventListener('click', () => { mark(b); poke(kind, v); });
+      row.appendChild(b);
+    }
+  }
+  document.getElementById('playground').hidden = false;
+}
+function stopAll() {
+  if (playing) clearTimeout(playing); playing = null;
+  document.getElementById('playAll').hidden = false; document.getElementById('stopAll').hidden = true;
+  document.getElementById('playNow').textContent = ''; mark(null);
+}
+document.getElementById('playAll').addEventListener('click', () => {
+  const all = [...document.querySelectorAll('#blobGroups button')];
+  let i = 0;
+  document.getElementById('playAll').hidden = true; document.getElementById('stopAll').hidden = false;
+  const step = () => {
+    if (i >= all.length) { stopAll(); say('Played everything.', 'ok'); return; }
+    const b = all[i++]; mark(b); poke(b.dataset.kind, b.dataset.value);
+    document.getElementById('playNow').textContent = `${i}/${all.length}: ${b.textContent}`;
+    playing = setTimeout(step, 5500);
+  };
+  step();
+});
+document.getElementById('stopAll').addEventListener('click', stopAll);
+// Live view: while this page is open (and the tab visible), ask the Echo for a picture every
+// couple of seconds and show the newest one.
+let liveTimer = null;
+function startLive() {
+  document.getElementById('live').hidden = false;
+  if (liveTimer) return;
+  const img = document.getElementById('screen'), note = document.getElementById('screenNote');
+  const tick = async () => {
+    if (document.hidden) return;
+    fetch('/echo/screen/watch', { method: 'POST', headers: {'X-Requested-With': 'echo-settings'} }).catch(() => {});
+    try {
+      const r = await fetch('/echo/screen?t=' + Date.now());
+      if (r.status === 200) {
+        const url = URL.createObjectURL(await r.blob());
+        const old = img.src; img.src = url; if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+        const age = Number(r.headers.get('X-Age-S') || 0);
+        note.textContent = age <= 6 ? 'Live · refreshes every couple of seconds' : `Last picture ${age}s ago`;
+      } else if (r.status === 204) note.textContent = 'The Muse Echo app isn\'t on screen right now.';
+      else note.textContent = 'Waiting for the first picture…';
+    } catch (e) { note.textContent = 'Can\'t reach echo-hub.'; }
+  };
+  tick();
+  liveTimer = setInterval(tick, 2000);
+}
+async function announce() {
+  const box = document.getElementById('sayText'), text = box.value.trim();
+  if (!text) return;
+  say('Sending…');
+  const r = await fetch('/echo/announce', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({text}) });
+  if (r.ok) { box.value = ''; say('Announced on the Echo.', 'ok'); } else say('Couldn\'t send: ' + (await r.text()), 'err');
+}
+document.getElementById('sayBtn').addEventListener('click', announce);
+document.getElementById('sayText').addEventListener('keydown', e => { if (e.key === 'Enter') announce(); });
+// Pages: reorder with the arrows, hide with the box; each change goes straight to the Echo.
+function drawPages() {
+  const box = document.getElementById('pages');
+  const order = (loaded.page_order || []).slice(), hidden = new Set(loaded.pages_hidden || []), labels = loaded.page_labels || {};
+  box.innerHTML = '';
+  order.forEach((name, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:4px 0';
+    row.innerHTML = `<span style="width:22px; color:var(--muted)">${i + 1}.</span><span style="flex:1; ${hidden.has(name) ? 'color:var(--muted)' : ''}">${esc(labels[name] || name)}</span>
+      <button type="button" class="ghost" data-up ${i === 0 ? 'disabled' : ''} style="padding:4px 12px">↑</button>
+      <button type="button" class="ghost" data-down ${i === order.length - 1 ? 'disabled' : ''} style="padding:4px 12px">↓</button>
+      <input type="checkbox" ${hidden.has(name) ? '' : 'checked'} title="Show this page">`;
+    const commit = (o, h) => { loaded.page_order = o; loaded.pages_hidden = [...h]; drawPages(); send({page_order: o, pages_hidden: [...h]}); };
+    row.querySelector('[data-up]').onclick = () => { const o = order.slice(); o.splice(i - 1, 0, o.splice(i, 1)[0]); commit(o, hidden); };
+    row.querySelector('[data-down]').onclick = () => { const o = order.slice(); o.splice(i + 1, 0, o.splice(i, 1)[0]); commit(o, hidden); };
+    row.querySelector('input').onchange = e => { const h = new Set(hidden); e.target.checked ? h.delete(name) : h.add(name); commit(order, h); };
+    box.appendChild(row);
+  });
+}
+// Welcome home: which device on the LAN is the phone.
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function showPresence() {
+  const note = document.getElementById('presenceNote');
+  try {
+    const p = await (await fetch('/presence')).json();
+    if (!p.configured) { note.textContent = `Pick your phone so ${BN()} knows when you come and go.`; return; }
+    const since = p.since ? ' since ' + new Date(p.since * 1000).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+    note.textContent = `Watching ${p.label || 'your phone'}: ` + (p.home === null ? 'checking…' : (p.home ? 'home' : 'out') + since);
+  } catch (e) { note.textContent = 'Couldn\'t check.'; }
+}
+async function pickDevice(mac, label) {
+  const r = await fetch('/presence/device', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({mac, label}) });
+  if (r.ok) { say(mac ? `Watching ${label}.` : 'Stopped watching.', 'ok'); document.getElementById('devices').innerHTML = ''; setTimeout(showPresence, 1500); }
+  else say('Couldn\'t save: ' + (await r.text()), 'err');
+}
+document.getElementById('findDevices').addEventListener('click', async () => {
+  const box = document.getElementById('devices');
+  box.innerHTML = '<small style="color:var(--muted)">Looking around the network (about 10 seconds)…</small>';
+  const d = await (await fetch('/presence/devices')).json();
+  const rows = d.devices.map(x => `<label class="row" style="padding:4px 0"><span>${esc(x.name || 'unnamed')}<small>${esc(x.ip)} · ${esc(x.mac)}</small></span>
+    <button type="button" class="ghost" data-mac="${esc(x.mac)}" data-label="${esc((x.name || x.ip).replace(/\.(local|attlocal\.net|lan)$/, ''))}">${d.chosen && d.chosen.mac === x.mac ? 'Watching' : 'This is my phone'}</button></label>`);
+  box.innerHTML = `<small style="color:var(--muted)">Tip: turn your phone's Wi-Fi off and on, then look for the one that comes back. Phones keep one private address per network, so it stays the same.</small>`
+    + rows.join('') + (d.chosen ? '<button type="button" class="ghost" data-mac="" data-label="">Stop watching</button>' : '');
+  box.querySelectorAll('button[data-mac]').forEach(b => b.addEventListener('click', () => pickDevice(b.dataset.mac, b.dataset.label)));
+});
+showPresence(); setInterval(showPresence, 60000);
+// Diary, things of the day, comings and goings, and today's timeline.
+const KINDS = {talk: ['💬', 'talked', '#8b6cff'], timer: ['⏰', 'timer', '#ffc266'], poke: ['👉', 'poked', '#ff7a8a'],
+  nudge: ['💧', 'nudge', '#45d3c7'], lights_off: ['🌑', 'lights off', '#6d6a80'], lights_on: ['💡', 'lights on', '#ffe08a'],
+  sleep: ['😴', 'went to sleep', '#9c93ab'], wake: ['☀️', 'woke up', '#ffc266'], left: ['🚪', 'you left', '#ff7a8a'],
+  home: ['🏠', 'you came home', '#45d3c7'], tv_on: ['📺', 'TV on', '#4fa3ff'], tv_off: ['📺', 'TV off', '#2e5c8a'],
+  friend: ['👯', 'friend visit', '#ff9ec7'], visitor: ['🙋', 'visitor', '#7fe0a8'], room: ['🪴', 'new in its room', '#5fbf7f'],
+  laptop: ['💻', 'laptop nudge', '#c5c6d0']};
+const fmtDay = d => new Date(d + 'T12:00').toLocaleDateString([], {weekday: 'long', month: 'short', day: 'numeric'});
+function drawTimeline(day) {
+  const svg = document.getElementById('timeline');
+  const x = m => 10 + m / 1440 * 700;
+  let h = '<rect x="10" y="30" width="700" height="10" rx="5" fill="#171221"/>';
+  for (let hr = 0; hr <= 24; hr += 3) h += `<text x="${x(hr * 60)}" y="62" fill="#9c93ab" font-size="11" text-anchor="middle">${hr % 24 === 0 ? '12a' : hr === 12 ? '12p' : hr < 12 ? hr + 'a' : (hr - 12) + 'p'}</text>`;
+  // TV spans as bars; everything else as dots with an emoji above.
+  let tvFrom = null;
+  for (const m of day.marks || []) {
+    if (m.kind === 'tv_on') tvFrom = m.min;
+    if (m.kind === 'tv_off' && tvFrom !== null) { h += `<rect x="${x(tvFrom)}" y="30" width="${Math.max(2, x(m.min) - x(tvFrom))}" height="10" fill="#4fa3ff" opacity=".6"/>`; tvFrom = null; }
+  }
+  const now = new Date(); const nowMin = now.getHours() * 60 + now.getMinutes();
+  if (tvFrom !== null) h += `<rect x="${x(tvFrom)}" y="30" width="${Math.max(2, x(nowMin) - x(tvFrom))}" height="10" fill="#4fa3ff" opacity=".6"/>`;
+  for (const m of day.marks || []) {
+    if (m.kind === 'tv_on' || m.kind === 'tv_off') continue;
+    const k = KINDS[m.kind] || ['•', m.kind, '#f3eef8'];
+    const t = `${Math.floor(m.min / 60) % 12 || 12}:${String(m.min % 60).padStart(2, '0')} ${m.min < 720 ? 'am' : 'pm'}`;
+    h += `<g><title>${t} · ${esc(m.label || k[1])}</title><circle cx="${x(m.min)}" cy="35" r="4" fill="${k[2]}"/>`;
+    if (['left', 'home', 'sleep', 'wake', 'friend', 'visitor', 'room'].includes(m.kind)) h += `<text x="${x(m.min)}" y="22" font-size="13" text-anchor="middle">${k[0]}</text>`;
+    h += '</g>';
+  }
+  h += `<line x1="${x(nowMin)}" x2="${x(nowMin)}" y1="26" y2="44" stroke="#ffc266" stroke-width="2"/>`;
+  svg.innerHTML = h;
+  const used = [...new Set((day.marks || []).map(m => m.kind))].filter(k => KINDS[k]);
+  document.getElementById('legend').innerHTML = used.map(k => `<span style="margin-right:12px"><span style="color:${KINDS[k][2]}">●</span> ${KINDS[k][0]} ${KINDS[k][1]}</span>`).join('') || 'Nothing yet today.';
+  document.getElementById('counts').innerHTML = `💬 ${day.talks || 0} talks · 👉 ${day.pokes || 0} pokes · ⏰ ${day.timers || 0} timers · 💧 ${day.nudges || 0} nudges · 📺 ${day.tvMinutes || 0} min TV · 🎵 ${day.musicMinutes || 0} min music`;
+}
+async function loadJournal() {
+  try {
+    const j = (await (await fetch('/echo/journal')).json()).journal;
+    if (!j) return;
+    document.getElementById('today').hidden = false;
+    document.getElementById('journal').hidden = false;
+    drawTimeline(j.day || {});
+    const diary = (j.diary || []).slice().reverse();
+    document.getElementById('diaryList').innerHTML = diary.length ? diary.map((e, i) =>
+      `<details ${i === 0 ? 'open' : ''} style="margin-bottom:6px"><summary style="cursor:pointer">${fmtDay(e.date)}</summary><p style="margin:6px 0 0; white-space:pre-wrap">${esc(e.text)}</p></details>`).join('')
+      : '<p style="color:var(--muted); margin:0">No entries yet (written after 9 pm).</p>';
+    const icons = {word: '📖', history: '📜', fact: '💡'};
+    const things = (j.things || []).slice().reverse();
+    document.getElementById('thingList').innerHTML = things.length ? things.map(t =>
+      `<p style="margin:4px 0">${icons[t.kind] || '💡'} <b>${esc(t.title)}</b> <small style="color:var(--muted)">${fmtDay(t.date)}</small><br>${esc(t.text)}</p>`).join('')
+      : '<p style="color:var(--muted); margin:0">None yet.</p>';
+    try {
+      const shots = (await (await fetch('/echo/album')).json()).slice().reverse();
+      document.getElementById('album').innerHTML = shots.length ? shots.map(a =>
+        `<a href="/echo/album/${a.date}.jpg" target="_blank" style="color:inherit; text-decoration:none"><img src="/echo/album/${a.date}.jpg" loading="lazy" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; display:block"><small style="color:var(--muted)">${fmtDay(a.date)} · ${esc(a.caption)}</small></a>`).join('')
+        : `<p style="color:var(--muted); margin:0">No pictures yet (one a day, when ${BN()} does something cute).</p>`;
+    } catch (e) {}
+    const fr = j.friends || {friends: [], diary: [], postcards: []};
+    const hex = c => '#' + (c & 0xFFFFFF).toString(16).padStart(6, '0');
+    const label = {tictactoe: 'tic-tac-toe', rps: 'rock-paper-scissors', hideseek: 'hide and seek', tag: 'tag', catch: 'catch'};
+    document.getElementById('friendList').innerHTML = fr.friends.length ? fr.friends.map(f => {
+      const games = Object.entries(f.played || {}).filter(([k]) => k in label).sort((a, b) => b[1] - a[1]);
+      const diary = (fr.diary || []).filter(e => e.friendId === f.id).reverse();
+      const cards = (fr.postcards || []).filter(p => p.friendId === f.id).reverse();
+      const letters = (fr.letters || []).filter(l => l.friendId === f.id).reverse();
+      const pair = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+      const buddies = fr.friends.filter(o => o.id !== f.id).map(o => [o, (fr.bonds || {})[pair(f.id, o.id)] || 0])
+        .filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      return `<details style="margin-bottom:8px; background:#171221; border-radius:12px; padding:10px 12px">
+        <summary style="cursor:pointer"><b style="color:${hex(f.color)}">● ${esc(f.name || 'New friend')}</b>
+          <small style="color:var(--muted)"> · ${esc((f.personality || 'bouncy').toLowerCase())}${f.birthday ? ' · 🎂 ' + f.birthday : ''} · ${f.visits || 0} visits · closeness ${f.closeness || 0}/100${games.length ? ' · loves ' + label[games[0][0]] : ''}</small></summary>
+        ${f.bio ? `<p style="margin:6px 0">${esc(f.bio)}</p>` : ''}
+        ${(f.wins || f.losses) ? `<small style="color:var(--muted)">Games: ${f.wins || 0} won, ${f.losses || 0} lost</small>` : ''}
+        ${buddies.length ? `<p style="margin:4px 0"><small style="color:var(--muted)">Close to: ${buddies.map(([o, n]) => esc(o.name || 'New friend') + (n >= 30 ? ' 💛' : '')).join(', ')}</small></p>` : ''}
+        ${letters.length ? '<p style="margin:6px 0 2px"><b>✉️ Letters</b></p>' + letters.map(l => `<p style="margin:2px 0 6px; white-space:pre-wrap"><small style="color:var(--muted)">${l.fromBlob ? '📮 reply · ' : ''}${fmtDay(l.date)}</small><br>${esc(l.text)}</p>`).join('') : ''}
+        ${cards.length ? '<p style="margin:6px 0 2px"><b>💌 Postcards</b></p>' + cards.map(c => `<p style="margin:2px 0">"${esc(c.text)}" <small style="color:var(--muted)">${c.date}</small></p>`).join('') : ''}
+        <p style="margin:6px 0 2px"><b>📔 ${esc(f.name || 'Its')} diary</b></p>
+        ${diary.length ? diary.map(e => `<p style="margin:2px 0 6px"><small style="color:var(--muted)">${fmtDay(e.date)}</small><br>${esc(e.text)}</p>`).join('') : '<p style="color:var(--muted); margin:0">Nothing yet (written in the evening after a visit).</p>'}
+      </details>`;
+    }).join('') : '<p style="color:var(--muted); margin:0">No friends yet.</p>';
+    drawWorld(j);
+    try {
+      const moments = (await (await fetch('/echo/album?kind=friends')).json()).slice().reverse();
+      document.getElementById('friendAlbum').innerHTML = moments.length ? moments.map(a =>
+        `<a href="/echo/album-friends/${a.name}.jpg" target="_blank" style="color:inherit; text-decoration:none"><img src="/echo/album-friends/${a.name}.jpg" loading="lazy" style="width:100%; border-radius:10px; display:block"><small style="color:var(--muted)">${fmtDay(a.date)} · ${esc(a.caption)}</small></a>`).join('')
+        : '<p style="color:var(--muted); margin:0">Every friend visit gets a picture (when its page is on screen).</p>';
+    } catch (e) {}
+    if (j.week_recap) { document.getElementById('recapBox').hidden = false; document.getElementById('recap').textContent = j.week_recap; }
+  } catch (e) { /* the Echo hasn't sent one yet */ }
+  try {
+    const log = (await (await fetch('/presence/log')).json()).slice(-12).reverse();
+    document.getElementById('presenceLog').innerHTML = log.length ? log.map(e =>
+      `${e.home ? '🏠 came home' : '🚪 went out'} · ${new Date(e.at * 1000).toLocaleString([], {weekday: 'short', hour: 'numeric', minute: '2-digit'})}`).join('<br>')
+      : 'Nothing yet (pick your phone above).';
+  } catch (e) {}
+}
+document.getElementById('friendsLeave').addEventListener('click', async () => {
+  const r = await fetch('/echo/friends/leave', { method: 'POST', headers: {'X-Requested-With': 'echo-settings'} });
+  say(r.ok ? 'Sent: everyone who\'s over heads home now (their visit still counts).' : 'Couldn\'t send: ' + (await r.text()), r.ok ? 'ok' : 'err');
+});
+document.getElementById('newFriend').addEventListener('click', async () => {
+  const r = await fetch('/echo/friends/add', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({count: 1}) });
+  say(r.ok ? 'A new friend is on the way. Pixel names it in a few minutes.' : 'Couldn\'t send: ' + (await r.text()), r.ok ? 'ok' : 'err');
+});
+document.querySelectorAll('[data-ask]').forEach(b => b.addEventListener('click', async () => {
+  const r = await fetch('/echo/ask', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({what: b.dataset.ask}) });
+  say(r.ok ? 'Asked. Pixel writes it in the background; it shows up here in a minute or so.' : 'Couldn\'t send: ' + (await r.text()), r.ok ? 'ok' : 'err');
+  if (r.ok) setTimeout(loadJournal, 60000);
+}));
+function drawWorld(j) {
+  const fr = j.friends || {}, cat = j.catalog || {};
+  const box = (title, inner) => `<details style="background:#171221; border-radius:12px; padding:10px 12px"><summary style="cursor:pointer">${title}</summary>${inner}</details>`;
+  const none = t => `<p style="color:var(--muted); margin:6px 0 0">${t}</p>`;
+  const pp = fr.penpal;
+  const books = (fr.books || []).slice().reverse(), stars = (fr.constellations || []).slice().reverse();
+  const stickers = cat.stickers || [], got = fr.stickers || {};
+  document.getElementById('worldPanel').innerHTML = [
+    box(`🌍 Pen pal${pp ? ': ' + esc(pp.name) : ''}`, pp ? `<p style="margin:6px 0 0">${esc(pp.name)} lives in ${esc(pp.place)}. ${esc(pp.bio || '')}</p>` : none('Not yet: Pixel invents one soon.')),
+    box(`📚 Bookshelf (${books.length})`, books.length ? books.map(b => `<p style="margin:6px 0 0"><b>${esc(b.title)}</b><br><small style="color:var(--muted)">${esc(b.reader)}: ${esc(b.review)}</small></p>`).join('') : none('No books yet.')),
+    box(`🏅 Stickers (${Object.keys(got).length}/${stickers.length})`, `<p style="margin:6px 0 0; line-height:1.9">${stickers.map(st => `<span title="${esc(st.title)}" style="opacity:${got[st.id] ? 1 : .3}">${got[st.id] ? st.emoji : '🔒'} <small>${esc(st.title)}</small></span>`).join('<br>')}</p>`),
+    box(`🔭 Constellations (${stars.length})`, stars.length ? stars.map(c => `<p style="margin:6px 0 0"><b>⭐ ${esc(c.name)}</b><br><small style="color:var(--muted)">${esc(c.shape)}</small></p>`).join('') : none('None named yet (on clear nights).')),
+  ].join('');
+}
+loadJournal(); setInterval(loadJournal, 120000);
+// The phone app: pairing code, download, and which notifications it shows.
+let phoneToken = '';
+async function loadPhone() {
+  try {
+    const r = await fetch('/phone/pairing', {headers: {'X-Requested-With': 'echo-settings'}});
+    if (!r.ok) return;
+    const p = await r.json();
+    phoneToken = p.token;
+    document.getElementById('phoneCode').textContent = p.qr;
+    const qr = document.getElementById('phoneQr'); qr.innerHTML = '';
+    if (window.QRCode) new QRCode(qr, {text: p.qr, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M});
+    else qr.innerHTML = '<p style="color:#000; font-size:13px">The QR code needs the internet to draw. Use the paste code instead.</p>';
+    document.getElementById('phoneVer').textContent = p.app ? `(version ${p.app.version})` : '(not built yet)';
+    const prefs = await (await fetch('/phone/prefs', {headers: {'Authorization': 'Bearer ' + phoneToken}})).json();
+    document.querySelectorAll('[data-notify]').forEach(c => { c.checked = !!prefs[c.dataset.notify]; });
+    document.getElementById('phone').hidden = false;
+  } catch (e) {}
+}
+document.querySelectorAll('[data-notify]').forEach(c => c.addEventListener('change', async () => {
+  const r = await fetch('/phone/prefs', {method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + phoneToken}, body: JSON.stringify({[c.dataset.notify]: c.checked})});
+  say(r.ok ? 'Saved. The phone picks it up next time it checks.' : 'Couldn\'t save: ' + (await r.text()), r.ok ? 'ok' : 'err');
+}));
+document.getElementById('phoneReset').addEventListener('click', async () => {
+  if (!confirm('Make a new pairing code? The phone that\'s paired now stops working until you scan the new one.')) return;
+  const r = await fetch('/phone/pairing/reset', {method: 'POST', headers: {'X-Requested-With': 'echo-settings'}});
+  say(r.ok ? 'New code made. Scan it with the phone.' : 'Couldn\'t: ' + (await r.text()), r.ok ? 'ok' : 'err');
+  loadPhone();
+});
+loadPhone();
+// Echo health, from its heartbeat (every minute).
+async function loadHealth() {
+  try {
+    const r = await fetch('/echo/health'); const d = await r.json();
+    const h = (d.last || {}).health; if (!h) return;
+    const up = s => s >= 86400 ? `${Math.floor(s / 86400)} d ${Math.floor(s % 86400 / 3600)} h` : `${Math.floor(s / 3600)} h ${Math.floor(s % 3600 / 60)} min`;
+    const tiles = [
+      ['Status', r.ok ? `✅ online (${d.age_s}s ago)` : '⚠️ not heard from'],
+      ['App', `${h.app_version || '?'} · up ${up(h.app_uptime_s || 0)}`],
+      ['Device up', up(h.uptime_s || 0)],
+      ['Memory', h.memory ? `${h.memory.available_mb} MB free of ${h.memory.total_mb}${h.memory.low ? ' (low!)' : ''}` : '?'],
+      ['Storage', h.storage ? `${h.storage.free_mb} MB free of ${h.storage.total_mb}` : '?'],
+      ['CPU', (h.cpu_temp_c != null ? `${Math.round(h.cpu_temp_c)}°C` : 'temp n/a') + (h.load ? ` · load ${h.load[0]}` : '')],
+      ['Wi-Fi', h.wifi_rssi_dbm != null ? `${h.wifi_rssi_dbm} dBm` : '?'],
+      ['Wake word', h.wake_word || '?'],
+      ['Pixel', h.connected ? 'connected' : 'not connected'],
+      ['Volume', h.volume_percent != null ? h.volume_percent + '%' : '?'],
+    ];
+    document.getElementById('healthBody').innerHTML = tiles.map(([k, v]) => `<div style="background:#171221; border-radius:10px; padding:8px 10px"><small style="color:var(--muted)">${k}</small><div>${esc(String(v))}</div></div>`).join('');
+    document.getElementById('healthErrors').textContent = (h.recent_errors || []).slice().reverse().join('\n') || 'None 🎉';
+    document.getElementById('health').hidden = false;
+  } catch (e) {}
+}
+loadHealth(); setInterval(loadHealth, 60000);
+// Gifts for the blob.
+const GIFTS = [['hat','PARTY_HAT','🎉 Party hat'],['hat','CROWN','👑 Crown'],['hat','BOW','🎀 Bow'],['hat','FLOWER','🌸 Flower'],['hat','SUNGLASSES','😎 Sunglasses'],
+  ['hat','SCARF','🧣 Scarf'],['snack','cake','🎂 Cake'],['snack','cookie','🍪 Cookie'],['snack','coffee','☕ Coffee'],['room','','🛋️ Something for its room']];
+const giftBox = document.getElementById('giftChips');
+for (const [kind, value, label] of GIFTS) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+  b.addEventListener('click', async () => {
+    const note = document.getElementById('giftNote').value.trim();
+    const r = await fetch('/echo/gift', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: JSON.stringify({kind, value, note}) });
+    say(r.ok ? 'Sent! Watch the Echo. 🎁' : 'Couldn\'t send: ' + (await r.text()), r.ok ? 'ok' : 'err');
+    if (r.ok) document.getElementById('giftNote').value = '';
+  });
+  giftBox.appendChild(b);
+}
+document.getElementById('gifts').hidden = false;
+// The world file: download (the Echo sends it in a few seconds) and restore.
+document.getElementById('world').hidden = false;
+document.getElementById('exportWorld').addEventListener('click', async () => {
+  say('Asking the Echo…');
+  await fetch('/echo/export/request', { method: 'POST', headers: {'X-Requested-With': 'echo-settings'} });
+  for (let i = 0; i < 20; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const r = await fetch('/echo/export', { headers: {'X-Requested-With': 'echo-settings'} });
+    if (r.ok) {
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a'); a.href = url; a.download = `puffs-world-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      say('Downloaded.', 'ok');
+      return;
+    }
+  }
+  say('The Echo didn\'t send it. Is it on?', 'err');
+});
+document.getElementById('importWorld').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  if (!confirm('Restore Puff\'s world from this file? Everything in it replaces what\'s on the Echo now (pairing stays), and the app restarts.')) { e.target.value = ''; return; }
+  const r = await fetch('/echo/import', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'echo-settings'}, body: await file.text() });
+  say(r.ok ? 'Sent. The Echo restores it and restarts in a few seconds.' : 'Couldn\'t restore: ' + (await r.text()), r.ok ? 'ok' : 'err');
+  e.target.value = '';
+});
+document.querySelectorAll('[data-still]').forEach(b => b.addEventListener('click', () => send({still_minutes: Number(b.dataset.still)})));
+document.querySelectorAll('[data-quiet]').forEach(b => b.addEventListener('click', () => send({quiet_minutes: Number(b.dataset.quiet)})));
+document.querySelectorAll('[data-guest]').forEach(b => b.addEventListener('click', () => send({guest_hours: Number(b.dataset.guest)})));
+load().catch(e => say('Couldn\'t reach echo-hub: ' + e, 'err'));
+</script>
+</body>
+</html>

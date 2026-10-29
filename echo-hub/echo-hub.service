@@ -1,0 +1,11 @@
+[Unit]
+Description=echo-hub: homelab status + Muse Echo updates for the Echo Show
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/share/echo-hub/echo_hub.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

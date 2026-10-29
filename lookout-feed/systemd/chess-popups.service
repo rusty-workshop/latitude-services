@@ -1,0 +1,6 @@
+[Unit]
+Description=Pop up "Your move" on Family Room TV for Lichess games
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/latitude-lookout/chess-popups.py

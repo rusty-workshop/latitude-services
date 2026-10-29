@@ -1,0 +1,14 @@
+[Unit]
+Description=Muse gadget (Meta Muse Linux Device SDK) for this account
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=MUSEGADGET_STATE_DIR=%h/.local/state/musegadget
+Environment=MUSEGADGET_SOCKET=%t/musegadget.sock
+ExecStart=%h/.local/share/musegadget/venv/bin/python -m musegadget run
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

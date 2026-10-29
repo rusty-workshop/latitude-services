@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# `musegadget` for this account: points the SDK at the user-level state dir
+# and socket, e.g.  musegadget send-user-msg "Backup failed"
+export MUSEGADGET_STATE_DIR=${MUSEGADGET_STATE_DIR:-$HOME/.local/state/musegadget}
+export MUSEGADGET_SOCKET=${MUSEGADGET_SOCKET:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/musegadget.sock}
+exec "$HOME/.local/share/musegadget/venv/bin/python" -m musegadget "$@"

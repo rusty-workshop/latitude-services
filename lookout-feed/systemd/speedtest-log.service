@@ -1,0 +1,6 @@
+[Unit]
+Description=Internet speed test for Lookout
+
+[Service]
+Type=oneshot
+ExecStart=%h/latitude-lookout/speedtest-log.sh

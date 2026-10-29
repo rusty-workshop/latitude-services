@@ -1,0 +1,11 @@
+[Unit]
+Description=Data feed for the Lookout Roku channel
+After=network-online.target gambit.service
+
+[Service]
+# gambit's venv has python-chess and cairosvg for the board images.
+ExecStart=%h/lichess-watch/.venv/bin/python %h/latitude-lookout/lookout-feed.py
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

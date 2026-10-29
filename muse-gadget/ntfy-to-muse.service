@@ -1,0 +1,12 @@
+[Unit]
+Description=Forward homelab ntfy alerts to Muse (via the Latitude gadget)
+After=network-online.target musegadget.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/share/musegadget/ntfy_to_muse.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target
